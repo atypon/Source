@@ -87,7 +87,12 @@ app.use(require('compression')());
 
 // Cookies
 app.use(require('cookie-parser')());
-app.use(require('express-session')({
+var session = require('express-session');
+var MemoryStore = require('memorystore')(session);
+app.use(session({
+    store: new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+    }),
     secret: (function() {
         var d = new Date().getTime();
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

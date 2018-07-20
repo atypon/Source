@@ -51,6 +51,7 @@
     "log4js": "~0.6.20",
     "macaddress": "^0.2.8",
     "marked": "^0.3.2",
+    "memorystore": "^1.6.0",
     "path": "^0.4.9",
     "phantomjs": "1.9.7-15",
     "pretty-hrtime": "^1.0.0",
