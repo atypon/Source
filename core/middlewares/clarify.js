@@ -5,7 +5,12 @@ var fs = require('fs-extra');
 var url = require('url');
 var Q = require('q');
 var _ = require('lodash');
-var jsdom = require('jsdom');
+var jsdom;
+try {
+  jsdom = require("jsdom/lib/old-api.js"); // jsdom >= 10.x
+} catch (e) {
+  jsdom = require("jsdom"); // jsdom <= 9.x
+}
 
 var ejs = require(path.join(global.pathToApp, 'core/ejsWithHelpers.js'));
 var trackStats = require(path.join(global.pathToApp, 'core/trackStats'));
