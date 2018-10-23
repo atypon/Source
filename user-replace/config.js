@@ -1,1 +1,1 @@
-../../../source/github/atypon/styleguide/ux3/user/config.js
+./styleguide/ux3/user/config.js
