@@ -16,8 +16,10 @@ var ejs = require(path.join(global.pathToApp, 'core/ejsWithHelpers.js'));
 var trackStats = require(path.join(global.pathToApp, 'core/trackStats'));
 var pathToApp = path.dirname(require.main.filename);
 var specUtils = require(path.join(pathToApp, 'core/lib/specUtils'));
+var configUtils = require(path.join(pathToApp, 'core/lib/configUtils'));
 var parseData = require(path.join(pathToApp, 'core/lib/parseData'));
 var htmlParser = require(path.join(pathToApp, 'core/html-tree/html-parser'));
+var viewResolver = require(path.join(global.pathToApp + '/core/lib/viewResolver.js'));
 
 
 var htmlDataPath = path.join(pathToApp, global.opts.core.api.htmlData);
@@ -30,31 +32,27 @@ var htmlParserEnabled = global.opts.plugins && global.opts.plugins.htmlParser &&
 
 //TODO JSdoc
 
-var getTpl = function(tpl) {
+var getTpl = function(tpl, contextOptions, info, specDir) {
     var deferred = Q.defer();
 
-    var templateName = tpl ? tpl : 'default';
+    var viewParam = tpl ? tpl : 'default';
 
-    // TODO: use view resolver
-    var pathToTemplate = path.join(pathToApp, 'core/views/clarify', templateName + '.ejs');
-    var userPathToTemplate = path.join(global.app.get('user'), 'core/views/clarify', templateName + '.ejs');
+    // choose the proper template, depending on page type or defined path
+    var context;
 
-    // First we check user tempalte, then core
-    fs.readFile(userPathToTemplate, 'utf-8', function(err, data){
+    if (info.template) {
+        context = specDir;
+    }
+
+    var templatePath = viewResolver(viewParam, contextOptions.rendering.views, context) || viewParam;
+
+    fs.readFile(templatePath, 'utf-8', function(err, data){
         if (err) {
-
-            fs.readFile(pathToTemplate, 'utf-8', function(err, data){
-                if (err) {
-                    deferred.reject(err);
-                    return;
-                }
-
-                deferred.resolve(data);
-            });
+            deferred.reject(err);
             return;
         }
 
-        deferred.resolve(data);
+        deferred.resolve({data: data, path: templatePath});
     });
 
     return deferred.promise;
@@ -258,6 +256,9 @@ module.exports.process = function(req, res, next) {
         var specHasHTMLAPIData = !!parseHTMLData.getByID(specID);
         var ua = req.headers && req.headers['user-agent'] ? req.headers['user-agent'] : undefined;
 
+        var contextOptions = configUtils.getContextOptions(parsedPath.pathToSpec);// = req.specData.contextOptions;
+        var specDir = specUtils.getFullPathToSpec(req.url);
+
         trackStats.page({
             pageName: 'clarify',
             sessionID: trackStats.getSessionID(req),
@@ -313,11 +314,13 @@ module.exports.process = function(req, res, next) {
                     clarifyData: clarifyData
                 };
 
-                getTpl(tpl).then(function(tpl){
+                getTpl(tpl, contextOptions, specInfo, specDir).then(function(tpl){
                     var html = '';
 
                     try {
-                        html = ejs.render(tpl, templateJSON);
+                        html = ejs.render(tpl.data, templateJSON, {
+                            filename: tpl.path
+                        });
                     } catch (err) {
                         var msg = 'Clarify: ERROR with EJS rendering failed';
 

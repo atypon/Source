@@ -100,6 +100,10 @@ module.exports = {
             navigation: [
                 '$(user)/core/views/navigation.ejs',
                 '$(sourcejs)/core/views/navigation.ejs'
+            ],
+            clear: [
+                '$(user)/core/views/clarify/clear.ejs',
+                '$(sourcejs)/core/views/clarify/clear.ejs'
             ]
         }
     },

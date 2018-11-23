@@ -106,6 +106,7 @@ exports.process = function (req, res, next) {
                     filename: templatePath
                 });
             } catch(err){
+                console.error(err);
                 req.specData.renderedHtml = 'Error rendering Spec with EJS: ' + template;
             }
 
