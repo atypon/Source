@@ -34,6 +34,7 @@ commander
     .option('--test', 'Run app with tests.')
     .option('--no-watch', 'Run with disabled watcher.')
     .option('--post-grunt [string]', 'Define Grunt command to run after app start', 'ci-post-run')
+    .option('--i18n [string]', 'Sets the locale to be used by the i18n library.')
     .parse(process.argv);
 
 global.commander = commander;
@@ -52,6 +53,10 @@ global.engineVersion = fs.readJsonSync(path.join(global.pathToApp, '/package.jso
 var logger = require('./core/logger');
 var log = logger.log;
 global.log = log;
+
+if (commander.i18n) {
+    global.i18nLocale = commander.i18n;
+}
 
 if (commander.html) {
     trackStats.event({
