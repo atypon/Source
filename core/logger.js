@@ -10,7 +10,7 @@ var customLogLevel = global.commander && global.commander.log ? global.commander
 var defaultLogLevel = global.MODE === 'production' ? global.opts.core.common.defaultProdLogLevel : global.opts.core.common.defaultLogLevel;
 var logLevel = customLogLevel || defaultLogLevel;
 
-var config =  {
+var config = {
     prepareLogPath: 'log',
     log4js: {
         "appenders": [
@@ -45,6 +45,7 @@ var config =  {
                     {
                         "type": "logLevelFilter",
                         "level": "WARN",
+                        "maxLevel": "WARN",
                         "appender": {
                             "type": "file",
                             "filename": path.join(logRootDir, 'log/warnings.log')
@@ -52,6 +53,38 @@ var config =  {
                     }
                 ],
                 category: 'app'
+            },
+            {
+                "type": "clustered",
+                "appenders": [
+                    {
+                        "type": "logLevelFilter",
+                        "level": "DEBUG",
+                        "maxLevel": "DEBUG",
+                        "appender": {
+                            "type": "file",
+                            "filename": path.join(logRootDir, 'log/access.log'),
+                            "maxLogSize": 10485760,
+                            "numBackups": 10
+                        }
+                    },
+                    {
+                        "type": "logLevelFilter",
+                        "level": "TRACE",
+                        "maxLevel": "TRACE",
+                        "appender": {
+                            "type": "file",
+                            "filename": path.join(logRootDir, 'log/memory-usage.log'),
+                            "maxLogSize": 10485760,
+                            "numBackups": 10,
+                            layout: {
+                                type: 'pattern',
+                                pattern: '%d %m%n'
+                            }
+                        }
+                    }
+                ],
+                category: 'util'
             }
         ]
     }
@@ -59,21 +92,21 @@ var config =  {
 
 if (global.opts.core.logger) utils.extendOptions(config, global.opts.core.logger);
 
-var reloadConf = function(currentConf){
+var reloadConf = function (currentConf) {
     log4js.configure(currentConf);
     log4js.replaceConsole(log4js.getLogger('app'));
 };
 
-var addAppenders = function(appendersArr){
+var addAppenders = function (appendersArr) {
 
-    appendersArr.forEach(function(item){
+    appendersArr.forEach(function (item) {
         config.log4js.appenders.push(item);
     });
 
     reloadConf(config.log4js);
 };
 
-var prepareLogDir = function(dir){
+var prepareLogDir = function (dir) {
     // Preparing log dir
     try {
         fs.mkdirpSync(path.join(logRootDir, dir));
@@ -91,6 +124,7 @@ prepareLogDir(config.prepareLogPath);
 reloadConf(config.log4js);
 
 var logger = log4js.getLogger('app');
+var utilLogger = log4js.getLogger('util');
 
 // Example
 // logger.trace('trace');
@@ -101,7 +135,7 @@ var logger = log4js.getLogger('app');
 // logger.error('error');
 // logger.fatal('fatal');
 
-if (global.logQueue) global.logQueue.forEach(function(item){
+if (global.logQueue) global.logQueue.forEach(function (item) {
     logger[item.level](item.msg);
 });
 
@@ -111,6 +145,7 @@ module.exports = {
 
     // Default logger
     log: logger,
+    util: utilLogger,
 
     // Configured log4js
     log4js: log4js

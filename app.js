@@ -27,7 +27,7 @@ global.opts = loadOptions();
 
 // Arguments parse */
 commander
-    .option('-l, --log [string]', 'Log level (default: ' + global.opts.core.common.defaultLogLevel + ').',  global.opts.core.common.defaultLogLevel)
+    .option('-l, --log [string]', 'Log level (default: ' + global.opts.core.common.defaultLogLevel + ').', global.opts.core.common.defaultLogLevel)
     .option('-p, --port [number]', 'Server port (default: ' + global.opts.core.server.port + ').')
     .option('--hostname [string]', 'Server hostname  (default: ' + global.opts.core.server.hostname + ').')
     .option('--html', 'Turn on HTML parser on app start (requires installed and enabled parser).')
@@ -47,11 +47,12 @@ app.set('user', path.join(__dirname, global.opts.core.common.pathToUser));
 // We support `development` (default), `production` and `presentation` (for demos)
 var MODE = global.MODE = process.env.NODE_ENV || 'development';
 
-global.engineVersion = fs.readJsonSync(path.join(global.pathToApp, '/package.json'), {throws: false}).version;
+global.engineVersion = fs.readJsonSync(path.join(global.pathToApp, '/package.json'), { throws: false }).version;
 
 // Default logger
 var logger = require('./core/logger');
 var log = logger.log;
+var utilLog = logger.util;
 global.log = log;
 
 if (commander.i18n) {
@@ -81,6 +82,9 @@ if (!commander.watch) {
 
 /* App config */
 
+var log4js = require('log4js');
+app.use(log4js.connectLogger(utilLog, { level: 'DEBUG' }));
+
 // Version
 app.use(function (req, res, next) {
     res.header('X-powered-by', 'SourceJS ' + global.engineVersion);
@@ -98,16 +102,16 @@ app.use(session({
     store: new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
     }),
-    secret: (function() {
+    secret: (function () {
         var d = new Date().getTime();
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = (d + Math.random() * 16) % 16 | 0;
             d = Math.floor(d / 16);
             return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
         });
     })(),
-  resave: false,
-  saveUninitialized: true
+    resave: false,
+    saveUninitialized: true
 }));
 
 app.use(function (req, res, next) {
@@ -131,7 +135,7 @@ app.use(function (req, res, next) {
 
 // Favicon
 var faviconPath = path.join(app.get('user'), 'favicon.ico');
-if (fs.existsSync(faviconPath)){
+if (fs.existsSync(faviconPath)) {
     app.use(favicon(faviconPath));
 }
 
@@ -158,7 +162,7 @@ fileTree.scan();
 
 // Run file tree scan on main page visit
 if (global.opts.core.fileTree.mainPageTrigger && global.MODE !== 'presentation') {
-    app.use(function(req, res, next){
+    app.use(function (req, res, next) {
 
         // Updating navigation on each main page visit
         if (req.url === '/') fileTree.scan();
@@ -168,7 +172,7 @@ if (global.opts.core.fileTree.mainPageTrigger && global.MODE !== 'presentation')
 }
 
 // Update file tree via api
-app.use('/api/updateFileTree', function(req, res){
+app.use('/api/updateFileTree', function (req, res) {
     fileTree.scan();
 
     res.jsonp({
@@ -190,7 +194,7 @@ require("./core/loadPlugins.js");
 try {
     // User additional functionality
     require(app.get('user') + "/core/app.js");
-} catch(e){}
+} catch (e) { }
 
 
 // Watchers
@@ -214,26 +218,26 @@ var headerFooter = require('./core/headerFooter');
 app.use(express.static(app.get('user')));
 
 // Page 404
-app.use(function(req, res){
-	if (req.accepts('html')) {
+app.use(function (req, res) {
+    if (req.accepts('html')) {
         if (req.url === '/') {
             res.redirect('/docs');
             return;
         }
 
         var headerFooterHTML = headerFooter.getHeaderAndFooter();
-		res.status(404).render(path.join(__dirname, '/core/views/404.ejs'), {
+        res.status(404).render(path.join(__dirname, '/core/views/404.ejs'), {
             header: headerFooterHTML.header,
             footer: headerFooterHTML.footer
-		});
-	}
+        });
+    }
 });
 /* /Serving content */
 
 
 
 /* Error handling */
-var logErrors = function(err, req, res, next) {
+var logErrors = function (err, req, res, next) {
     if (err) {
         var url = req.url || '';
 
@@ -241,11 +245,12 @@ var logErrors = function(err, req, res, next) {
         log.error(('Requested url: ' + url).red, ('Error: ' + err.stack).red);
 
         if (req.xhr) {
-            res.status(500).json({msg: 'Server error'});
+            res.status(500).json({ msg: 'Server error' });
         } else {
             res.status(500).send('Server error');
         }
     } else {
+        console.log('ok')
         next();
     }
 };
@@ -255,18 +260,19 @@ app.use(logErrors);
 
 
 
+let server;
 /* Server start */
 if (!module.parent) {
     var serverOpts = global.opts.core.server;
     var port = serverOpts.port;
 
-    app.listen(port, serverOpts.hostname, serverOpts.backlog, serverOpts.callback);
+    server = app.listen(port, serverOpts.hostname, serverOpts.backlog, serverOpts.callback);
     log.info('[SOURCEJS] launched on http://127.0.0.1:'.blue + (port.toString()).red + ' in '.blue + MODE.blue + ' mode...'.blue);
 
     if (commander.test) {
         var spawn = require('cross-spawn');
 
-        spawn('./node_modules/grunt-cli/bin/grunt', [commander.postGrunt, '--port='+port], {stdio: 'inherit'})
+        spawn('./node_modules/grunt-cli/bin/grunt', [commander.postGrunt, '--port=' + port], { stdio: 'inherit' })
             .on('close', function (code) {
                 if (code === 0) {
                     log.info('Test successful');
@@ -291,3 +297,39 @@ if (!module.parent) {
     }
 }
 /* Server start */
+
+// Handle errors/exceptions
+
+function terminate(server, options = { coredump: false, timeout: 500 }) {
+    // Exit function
+    const exit = code => {
+        options.coredump ? process.abort() : process.exit(code);
+    };
+
+    return (code, reason) => (err, promise) => {
+        if (err && err instanceof Error) {
+            log.error(reason, err.message, err.stack);
+            console.log('Server shutdown initiated:', (reason).red, '\n', err.message, '\n', err.stack);
+        } else {
+            console.log('Server shutdown initiated:', (reason).red);
+        }
+
+        // Attempt a graceful shutdown
+        server.close(exit);
+        setTimeout(exit, options.timeout).unref();
+    };
+}
+
+const exitHandler = terminate(server, {
+    coredump: false,
+    timeout: 500
+});
+
+process.on('uncaughtException', exitHandler(1, 'Uncaught exception:'));
+process.on('unhandledRejection', exitHandler(1, 'Unhandled promise rejection:'));
+process.on('SIGTERM', exitHandler(0, 'SIGTERM'));
+process.on('SIGINT', exitHandler(0, 'SIGINT'));
+
+setInterval(() => {
+    utilLog.trace('Memory usage:', JSON.stringify(process.memoryUsage()));
+}, 10000);
